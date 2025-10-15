@@ -1,0 +1,19 @@
+*.env
+node_modules/
+
+# Go build artifacts
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+backend/fafosnap
+backend/output-*.png
+
+# Go build cache and profiling artifacts
+*.log
+*.prof
+coverage.out
+*.pprof
