@@ -26,9 +26,9 @@ func main() {
 	}
 
 	urls := []string{
-		"https://www.google.com",
-		"https://www.github.com",
+		"https://google.com",
 		"https://vercel.com",
+		"https://github.com",
 	}
 
 	go func() {
