@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
-	"os"
+	"net/http"
 )
 
 func main() {
@@ -18,41 +18,23 @@ func main() {
 		workerCount = 1
 	}
 
-	jobs := make(chan string)
-	results := make(chan ScreenshotResult)
+	jobBuffer := workerCount * 2
+	if jobBuffer <= 0 {
+		jobBuffer = 1
+	}
+
+	jobs := make(chan ScreenshotJob, jobBuffer)
 
 	for i := 0; i < workerCount; i++ {
-		go worker(i+1, jobs, results, cfg)
+		go worker(i+1, jobs, cfg)
 	}
 
-	urls := []string{
-		"https://google.com",
-		"https://vercel.com",
-		"https://github.com",
+	srv := newServer(cfg, jobs)
+
+	addr := fmt.Sprintf(":%d", cfg.ServerPort)
+	log.Printf("server listening on %s with %d workers", addr, workerCount)
+
+	if err := http.ListenAndServe(addr, srv.routes()); err != nil {
+		log.Fatalf("server error: %v", err)
 	}
-
-	go func() {
-		for _, url := range urls {
-			jobs <- url
-		}
-		close(jobs)
-	}()
-
-	for i := 0; i < len(urls); i++ {
-		res := <-results
-		if res.Err != nil {
-			log.Printf("error capturing %s: %v", res.URL, res.Err)
-			continue
-		}
-
-		filename := fmt.Sprintf("output-%d.png", i+1)
-		if err := os.WriteFile(filename, res.Image, 0o644); err != nil {
-			log.Printf("failed to write %s for %s: %v", filename, res.URL, err)
-			continue
-		}
-
-		log.Printf("saved screenshot for %s to %s", res.URL, filename)
-	}
-
-	log.Println("all jobs completed")
 }
