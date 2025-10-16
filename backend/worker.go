@@ -2,44 +2,40 @@ package main
 
 import "log"
 
-// ScreenshotResult holds the outcome of a screenshot job.
-type ScreenshotResult struct {
-	URL   string
-	Image []byte
-	Err   error
-}
-
 // ScreenshotJob contains the work item dispatched to a worker.
 type ScreenshotJob struct {
-	URL         string
-	Response    chan<- ScreenshotResult
-	Attempts    int
-	MaxAttempts int
+	URL     string
+	Attempt int
+}
+
+// ScreenshotResult holds the outcome of a screenshot job.
+type ScreenshotResult struct {
+	URL     string
+	Attempt int
+	Image   []byte
+	Err     error
 }
 
 // worker consumes jobs, capturing screenshots and emitting results.
-func worker(id int, jobs chan ScreenshotJob, config *Config) {
-	log.Printf("worker %d started", id)
+func worker(id int, jobs <-chan ScreenshotJob, results chan<- ScreenshotResult, timeoutSeconds int) {
+	log.Printf("worker %d ready", id)
 
 	for job := range jobs {
-		log.Printf("worker %d processing %s (attempt %d/%d)", id, job.URL, job.Attempts+1, job.MaxAttempts)
-		img, err := takeScreenshot(job.URL, config.JobTimeoutSeconds)
+		log.Printf("worker %d processing %s (attempt %d)", id, job.URL, job.Attempt+1)
 
-		if err != nil && job.Attempts+1 < job.MaxAttempts {
-			log.Printf("worker %d retrying %s: %v", id, job.URL, err)
-			job.Attempts++
-			go func(j ScreenshotJob) {
-				jobs <- j
-			}(job)
-			continue
+		img, err := takeScreenshot(job.URL, timeoutSeconds)
+		if err != nil {
+			log.Printf("worker %d error on %s attempt %d: %v", id, job.URL, job.Attempt+1, err)
+			img = nil
 		}
 
-		result := ScreenshotResult{
-			URL:   job.URL,
-			Image: img,
-			Err:   err,
+		results <- ScreenshotResult{
+			URL:     job.URL,
+			Attempt: job.Attempt,
+			Image:   img,
+			Err:     err,
 		}
-
-		job.Response <- result
 	}
+
+	log.Printf("worker %d shutting down", id)
 }

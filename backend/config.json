@@ -1,6 +1,10 @@
 {
 	"serverPort": 8080,
-	"workerCount": 8,
-	"jobTimeoutSeconds": 20,
-	"maxUrlsPerRequest": 10
+	"workerCount": 4,
+	"jobTimeoutSeconds": 60,
+	"maxUrlsPerRequest": 10,
+	"maxAttempts": 2,
+	"defaultUrls": [
+		"https://github.com"
+	]
 }
