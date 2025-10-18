@@ -10,7 +10,7 @@ node_modules/
 *.test
 *.out
 backend/fafosnap
-backend/output-*.png
+backend/screenshots/output-*.png
 
 # Go build cache and profiling artifacts
 *.log
