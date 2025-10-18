@@ -7,7 +7,8 @@
 	"defaultUrls": [
 		"https://github.com",
 		"https://www.google.com",
-		"https://www.vercel.com"
+		"https://www.vercel.com",
+		"https://codecompass-tau.vercel.app"
 
 	]
 }

@@ -144,6 +144,14 @@ func captureSections(ctx context.Context, settle time.Duration) ([]byte, error) 
 			maxWidth = w
 		}
 
+		if section == 0 {
+			if hidden, err := hidePersistentOverlays(ctx); err != nil {
+				log.Printf("warn: failed to hide persistent overlays: %v", err)
+			} else {
+				log.Printf("hidden %d persistent overlay element(s) after first section", hidden)
+			}
+		}
+
 		remaining := state.ScrollHeight - (state.ScrollY + captureHeight)
 		if remaining <= 1 {
 			break
@@ -240,6 +248,37 @@ func toNRGBA(img image.Image) *image.NRGBA {
 	normalized := image.NewNRGBA(image.Rect(0, 0, bounds.Dx(), bounds.Dy()))
 	draw.Draw(normalized, normalized.Bounds(), img, bounds.Min, draw.Src)
 	return normalized
+}
+
+func hidePersistentOverlays(ctx context.Context) (int, error) {
+	var hidden int
+	script := `(() => {
+		let count = 0;
+		const candidates = Array.from(document.body.querySelectorAll('*'));
+		candidates.forEach(el => {
+			const style = window.getComputedStyle(el);
+			const pos = style.position;
+			if (pos !== 'fixed' && pos !== 'sticky') {
+				return;
+			}
+			if (el.dataset.__fafosnapHidden === '1') {
+				return;
+			}
+			el.dataset.__fafosnapHidden = '1';
+			el.dataset.__fafosnapOrigVisibility = el.style.visibility || '';
+			el.dataset.__fafosnapOrigOpacity = el.style.opacity || '';
+			el.dataset.__fafosnapOrigPointerEvents = el.style.pointerEvents || '';
+			el.style.visibility = 'hidden';
+			el.style.opacity = '0';
+			el.style.pointerEvents = 'none';
+			count += 1;
+		});
+		return count;
+	})()`
+	if err := chromedp.Run(ctx, chromedp.Evaluate(script, &hidden, chromedp.EvalAsValue)); err != nil {
+		return 0, err
+	}
+	return hidden, nil
 }
 
 func waitWithContext(ctx context.Context, d time.Duration) error {
